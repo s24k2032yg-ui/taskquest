@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskQuest - 課題管理クエストボード</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Canvas for Confetti effects -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">🛡️</span>
+                <h1>TaskQuest</h1>
+            </div>
+            
+            <div class="player-stats-bar">
+                <div class="stat-item level-badge">
+                    <span class="label">LV</span>
+                    <span id="player-level" class="value">1</span>
+                </div>
+                <div class="exp-container">
+                    <div class="exp-bar-wrapper">
+                        <div id="player-exp-bar" class="exp-bar" style="width: 0%;"></div>
+                    </div>
+                    <span class="exp-text"><span id="player-exp">0</span> / <span id="player-next-exp">100</span> EXP</span>
+                </div>
+                <div class="stat-item coin-badge">
+                    <span class="coin-icon">🪙</span>
+                    <span id="player-coins" class="value">0</span>
+                </div>
+                <button id="sound-toggle" class="icon-btn" aria-label="サウンド切り替え" title="サウンドON/OFF">
+                    <svg class="sound-icon sound-on" viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+                    </svg>
+                    <svg class="sound-icon sound-off hidden" viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M12,4L9.91,6.09L12,8.18M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.53C15.58,18.04 14.83,18.46 14,18.7V20.77C15.38,20.44 16.63,19.79 17.7,18.9L20.73,21.93L22,20.66L4.27,3M19,12C19,12.94 18.8,13.82 18.46,14.64L19.97,16.15C20.62,14.91 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M16.5,12C16.5,10.23 15.5,8.71 14,7.97V10.18L16.45,12.63C16.48,12.43 16.5,12.22 16.5,12Z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-main">
+            <!-- LEFT PANEL: Companion & Summary -->
+            <aside class="left-panel">
+                <!-- Companion Mascot Box -->
+                <div class="mascot-box card">
+                    <div class="mascot-speech">
+                        <div class="speech-bubble">
+                            <p id="mascot-message">タスククエストへようこそ！今日の課題をチェックしよう！</p>
+                        </div>
+                    </div>
+                    <div class="mascot-display">
+                        <!-- SVG Mascot: Taskun -->
+                        <svg id="mascot-svg" class="mascot-svg mascot--idle" viewBox="0 0 200 200" width="180" height="180">
+                            <defs>
+                                <radialGradient id="body-grad" cx="50%" cy="40%" r="50%" fx="30%" fy="30%">
+                                    <stop offset="0%" stop-color="#a5f3fc" />
+                                    <stop offset="70%" stop-color="#0284c7" />
+                                    <stop offset="100%" stop-color="#0369a1" />
+                                </radialGradient>
+                                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feGaussianBlur stdDeviation="8" result="blur" />
+                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                </filter>
+                            </defs>
+                            <!-- Floating shadow -->
+                            <ellipse cx="100" cy="180" rx="45" ry="8" fill="rgba(0, 0, 0, 0.4)" class="mascot-shadow" />
+                            
+                            <!-- Mascot Body Group -->
+                            <g class="mascot-body-group">
+                                <!-- Ears / Antennae -->
+                                <path d="M 60 50 Q 50 20 40 30" stroke="#0f172a" stroke-width="8" stroke-linecap="round" fill="none" />
+                                <circle cx="40" cy="30" r="10" fill="#f43f5e" stroke="#0f172a" stroke-width="3" />
+                                <path d="M 140 50 Q 150 20 160 30" stroke="#0f172a" stroke-width="8" stroke-linecap="round" fill="none" />
+                                <circle cx="160" cy="30" r="10" fill="#f43f5e" stroke="#0f172a" stroke-width="3" />
+
+                                <!-- Body -->
+                                <circle cx="100" cy="110" r="60" fill="url(#body-grad)" stroke="#0f172a" stroke-width="6" />
+                                
+                                <!-- Floating Hands -->
+                                <circle cx="33" cy="120" r="11" fill="#a5f3fc" stroke="#0f172a" stroke-width="3" class="hand-left" />
+                                <circle cx="167" cy="120" r="11" fill="#a5f3fc" stroke="#0f172a" stroke-width="3" class="hand-right" />
+                                
+                                <!-- Face Screen -->
+                                <rect x="55" y="80" width="90" height="50" rx="15" fill="#0f172a" stroke="#0f172a" stroke-width="5" />
+                                
+                                <!-- Face Expressions -->
+                                <!-- 1. Idle / Normal Face -->
+                                <g class="face-expr face-expr--idle">
+                                    <!-- Cute digital eyes -->
+                                    <ellipse cx="80" cy="102" rx="6" ry="8" fill="#38bdf8" class="eye-blink" />
+                                    <ellipse cx="120" cy="102" rx="6" ry="8" fill="#38bdf8" class="eye-blink" />
+                                    <!-- Smile mouth -->
+                                    <path d="M 95 115 Q 100 120 105 115" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" fill="none" />
+                                </g>
+
+                                <!-- 2. Happy Face (Quest complete / Level up) -->
+                                <g class="face-expr face-expr--happy hidden">
+                                    <!-- Laughing / Curved eyes ( ^ v ^ ) -->
+                                    <path d="M 72 105 Q 80 95 88 105" stroke="#a7f3d0" stroke-width="4" stroke-linecap="round" fill="none" />
+                                    <path d="M 112 105 Q 120 95 128 105" stroke="#a7f3d0" stroke-width="4" stroke-linecap="round" fill="none" />
+                                    <!-- Open happy mouth -->
+                                    <path d="M 92 112 Q 100 125 108 112 Z" fill="#f43f5e" />
+                                    <!-- Rosy Cheeks -->
+                                    <circle cx="68" cy="115" r="5" fill="#f43f5e" opacity="0.6" />
+                                    <circle cx="132" cy="115" r="5" fill="#f43f5e" opacity="0.6" />
+                                </g>
+
+                                <!-- 3. Panic Face (Near due date) -->
+                                <g class="face-expr face-expr--panic hidden">
+                                    <!-- Wavy/Dizzy eyes ( > _ < ) -->
+                                    <path d="M 74 98 L 84 108 M 84 98 L 74 108" stroke="#f43f5e" stroke-width="4" stroke-linecap="round" />
+                                    <path d="M 116 98 L 126 108 M 126 98 L 116 108" stroke="#f43f5e" stroke-width="4" stroke-linecap="round" />
+                                    <!-- Wobbly mouth -->
+                                    <path d="M 92 118 Q 96 114 100 118 T 108 118" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" fill="none" />
+                                    <!-- Sweat droplet -->
+                                    <path d="M 135 75 Q 140 85 133 90 Q 128 85 135 75" fill="#38bdf8" class="sweat-drop" />
+                                </g>
+
+                                <!-- 4. Sleeping Face (Idle for a long time) -->
+                                <g class="face-expr face-expr--sleep hidden">
+                                    <!-- Closed sleeping eyes ( - _ - ) -->
+                                    <line x1="72" y1="105" x2="88" y2="105" stroke="#64748b" stroke-width="4" stroke-linecap="round" />
+                                    <line x1="112" y1="105" x2="128" y2="105" stroke="#64748b" stroke-width="4" stroke-linecap="round" />
+                                    <!-- Tiny 'o' mouth -->
+                                    <circle cx="100" cy="115" r="4" fill="#64748b" />
+                                </g>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Load Analysis (Load Meter) -->
+                <div class="load-card card">
+                    <h3>📊 クエスト負荷分析</h3>
+                    <div class="load-gauge-container">
+                        <div class="load-gauge">
+                            <svg viewBox="0 0 100 50" class="gauge-svg">
+                                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#334155" stroke-width="10" stroke-linecap="round" />
+                                <path id="load-gauge-fill" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gauge-grad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="126" stroke-dashoffset="126" />
+                                <defs>
+                                    <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#10b981" />
+                                        <stop offset="50%" stop-color="#f59e0b" />
+                                        <stop offset="100%" stop-color="#ef4444" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="gauge-value">
+                                <span id="load-percent">0</span><span class="unit">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="load-description" id="load-status-desc">現在未完了のクエストはありません。のんびり過ごそう！</p>
+                    <div class="progress-stats">
+                        <div class="prog-row">
+                            <span>完了したクエスト</span>
+                            <span id="stat-completed-count">0 件</span>
+                        </div>
+                        <div class="prog-row">
+                            <span>期限間近（24h以内）</span>
+                            <span id="stat-urgent-count" class="danger-text">0 件</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- RIGHT PANEL: Quest Board -->
+            <section class="right-panel">
+                <div class="board-header">
+                    <h2>🛡️ クエストボード（課題一覧）</h2>
+                    <button id="btn-open-modal" class="primary-btn pulse">
+                        <span class="btn-icon">＋</span> 新しいクエストを受注
+                    </button>
+                </div>
+
+                <!-- Quest Board Categories -->
+                <div class="quest-board">
+                    <!-- 1. Critical Quests (Urgent: <24h) -->
+                    <div class="quest-column urgent-column">
+                        <div class="column-header">
+                            <span class="status-indicator red-glow"></span>
+                            <h3>🚨 緊急クエスト <span class="badge red" id="count-urgent">0</span></h3>
+                            <span class="header-desc">期限24時間以内！最優先で攻略せよ</span>
+                        </div>
+                        <div class="quest-list" id="list-urgent">
+                            <!-- JS templates injected here -->
+                            <div class="empty-placeholder">緊急クエストはありません。素晴らしい！</div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Active Quests (Normal: <3 days) -->
+                    <div class="quest-column active-column">
+                        <div class="column-header">
+                            <span class="status-indicator orange-glow"></span>
+                            <h3>⏳ 進行中クエスト <span class="badge orange" id="count-active">0</span></h3>
+                            <span class="header-desc">期限3日以内。計画的に攻略しよう</span>
+                        </div>
+                        <div class="quest-list" id="list-active">
+                            <!-- JS templates injected here -->
+                            <div class="empty-placeholder">進行中のクエストはありません。</div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Future Quests (Safe: >3 days) -->
+                    <div class="quest-column safe-column">
+                        <div class="column-header">
+                            <span class="status-indicator green-glow"></span>
+                            <h3>🛡️ 通常クエスト <span class="badge green" id="count-safe">0</span></h3>
+                            <span class="header-desc">期限に余裕あり。早めの着手が吉</span>
+                        </div>
+                        <div class="quest-list" id="list-safe">
+                            <!-- JS templates injected here -->
+                            <div class="empty-placeholder">登録されたクエストはありません。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completed Quests Section -->
+                <div class="completed-section card">
+                    <button id="toggle-completed" class="collapse-btn">
+                        <span>🏆 クリア済みのクエスト (<span id="count-completed">0</span>)</span>
+                        <svg class="arrow-icon" viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="currentColor" d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" />
+                        </svg>
+                    </button>
+                    <div id="completed-container" class="completed-container hidden">
+                        <div class="quest-list list-completed" id="list-completed">
+                            <!-- Completed items will go here -->
+                            <p class="empty-text">クリアしたクエストはまだありません。最初のクエストをクリアしよう！</p>
+                        </div>
+                        <button id="btn-clear-completed" class="danger-btn text-btn hidden">
+                            クリア履歴をすべて消去
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="app-footer">
+            <p>© 2026 TaskQuest - 学業をサポートするクエスト管理システム</p>
+            <div class="footer-links">
+                <button id="btn-reset-app" class="text-btn">アプリ初期化</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL: ADD QUEST -->
+    <div id="quest-modal" class="modal-overlay hidden">
+        <div class="modal-content card animate-zoom">
+            <div class="modal-header">
+                <h2>📜 クエスト（課題）の発行</h2>
+                <button id="btn-close-modal" class="close-btn" aria-label="閉じる">&times;</button>
+            </div>
+            <form id="quest-form">
+                <div class="form-group">
+                    <label for="quest-title">クエスト名（課題の内容） <span class="required">*</span></label>
+                    <input type="text" id="quest-title" placeholder="例: 数学プリント P.24〜25" required maxlength="40">
+                </div>
+
+                <div class="form-group">
+                    <label>科目タグ <span class="required">*</span></label>
+                    <div class="subject-tags-grid">
+                        <label class="subject-tag-option">
+                            <input type="radio" name="subject" value="japanese" checked>
+                            <span class="tag-label jp-tag">📖 国語</span>
+                        </label>
+                        <label class="subject-tag-option">
+                            <input type="radio" name="subject" value="math">
+                            <span class="tag-label math-tag">📐 数学</span>
+                        </label>
+                        <label class="subject-tag-option">
+                            <input type="radio" name="subject" value="english">
+                            <span class="tag-label eng-tag">🔤 英語</span>
+                        </label>
+                        <label class="subject-tag-option">
+                            <input type="radio" name="subject" value="science">
+                            <span class="tag-label sci-tag">🧪 理科</span>
+                        </label>
+                        <label class="subject-tag-option">
+                            <input type="radio" name="subject" value="social">
+                            <span class="tag-label soc-tag">🌍 社会</span>
+                        </label>
+                        <label class="subject-tag-option">
+                            <input type="radio" name="subject" value="other">
+                            <span class="tag-label oth-tag">✨ その他</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>提出期限（デッドライン） <span class="required">*</span></label>
+                    <div class="due-presets">
+                        <button type="button" class="preset-btn" data-preset="today">今日中</button>
+                        <button type="button" class="preset-btn" data-preset="tomorrow">明日中</button>
+                        <button type="button" class="preset-btn" data-preset="weekend">今週末</button>
+                        <button type="button" class="preset-btn active" data-preset="custom">カスタム</button>
+                    </div>
+                    <div class="date-picker-wrapper" id="custom-date-container">
+                        <input type="datetime-local" id="quest-due" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>クエスト難易度（課題の重さ）</label>
+                    <div class="difficulty-rating">
+                        <input type="radio" name="difficulty" id="diff-1" value="1" checked>
+                        <label for="diff-1" class="diff-star" title="かんたん (10 EXP)">
+                            <span class="star-icon">★</span>
+                            <span class="diff-desc">かんたん</span>
+                        </label>
+                        
+                        <input type="radio" name="difficulty" id="diff-2" value="2">
+                        <label for="diff-2" class="diff-star" title="ふつう (30 EXP)">
+                            <span class="star-icon">★★</span>
+                            <span class="diff-desc">ふつう</span>
+                        </label>
+                        
+                        <input type="radio" name="difficulty" id="diff-3" value="3">
+                        <label for="diff-3" class="diff-star" title="たいへん (60 EXP)">
+                            <span class="star-icon">★★★</span>
+                            <span class="diff-desc">たいへん</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="quest-notes">メモ（任意）</label>
+                    <textarea id="quest-notes" rows="3" placeholder="提出方法や詳細（例: Google Classroomで提出、ノートに解く等）" maxlength="150"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="btn-cancel" class="secondary-btn">キャンセル</button>
+                    <button type="submit" class="primary-btn">クエスト発行！</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEVEL UP BANNER MODAL -->
+    <div id="level-up-modal" class="modal-overlay hidden level-up-overlay">
+        <div class="level-up-card animate-bounce-in">
+            <div class="lvl-crown">👑</div>
+            <h2 class="lvl-title">LEVEL UP!</h2>
+            <p class="lvl-subtitle">冒険者のレベルが上がった！</p>
+            <div class="lvl-display">
+                <span class="lvl-old" id="lvl-old-val">1</span>
+                <span class="lvl-arrow">➔</span>
+                <span class="lvl-new" id="lvl-new-val">2</span>
+            </div>
+            <p class="lvl-reward">🪙 <span id="lvl-coin-reward">50</span> コインを獲得！</p>
+            <button id="btn-lvl-close" class="primary-btn pulse">冒険を続ける</button>
+        </div>
+    </div>
+
+    <!-- JS Source -->
+    <script src="app.js"></script>
+</body>
+</html>
