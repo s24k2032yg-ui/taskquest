@@ -173,6 +173,48 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Notification Settings Card -->
+                <div class="notification-card card">
+                    <h3>🔔 通知の伝書鳩</h3>
+                    <p class="notification-desc">クエストの期限が迫った時にブラウザ通知でお知らせします。</p>
+                    
+                    <div class="notification-switch-row">
+                        <span class="switch-label">通知を有効にする</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notification-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div id="notification-options" class="notification-options disabled-panel">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="notify-24h" checked>
+                                <span class="custom-checkbox-box"></span>
+                                🚨 24時間前の緊急アラート
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="notify-3h" checked>
+                                <span class="custom-checkbox-box"></span>
+                                ⏳ 3時間前の警告アラート
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="notify-1h" checked>
+                                <span class="custom-checkbox-box"></span>
+                                ⏱️ 1時間前の直前アラート
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="notify-action" checked>
+                                <span class="custom-checkbox-box"></span>
+                                ⚔️ 受注・クリア時のファンファーレ
+                            </label>
+                        </div>
+                        <button type="button" id="btn-test-notification" class="secondary-btn btn-sm">
+                            伝書鳩を飛ばす（テスト）
+                        </button>
+                    </div>
+                </div>
             </aside>
 
             <!-- RIGHT PANEL: Quest Board -->

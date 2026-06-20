@@ -1477,6 +1477,180 @@ input[type="datetime-local"]:focus {
     transform: scale(1.05);
 }
 
+/* ==========================================================================
+   NOTIFICATION SETTINGS CARD (🔔 通知の伝書鳩)
+   ========================================================================== */
+.notification-card {
+    margin-top: 16px;
+    background: var(--card-bg);
+}
+
+.notification-card h3 {
+    font-size: 1.15rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 16px;
+    font-weight: 700;
+}
+
+.notification-switch-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: var(--border-width-thin) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 10px 14px;
+    box-shadow: 2px 2px 0px var(--border-color);
+    margin-bottom: 16px;
+}
+
+.switch-label {
+    font-size: 0.85rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+
+/* Toggle Switch (Neo-Brutalist) */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e2e8f0;
+    border: var(--border-width-thin) solid var(--border-color);
+    border-radius: 34px;
+    transition: var(--transition-smooth);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 3px;
+    background-color: var(--border-color);
+    border-radius: 50%;
+    transition: var(--transition-smooth);
+}
+
+.toggle-switch input:checked + .slider {
+    background-color: var(--accent-cyan);
+}
+
+.toggle-switch input:checked + .slider:before {
+    transform: translateX(22px);
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+}
+
+/* Notification Options (Disabled when toggle is off) */
+.notification-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: var(--transition-smooth);
+}
+
+.notification-options.disabled-panel {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(80%);
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Neo-Brutalist Checkbox */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.checkbox-label input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.custom-checkbox-box {
+    width: 18px;
+    height: 18px;
+    background-color: #ffffff;
+    border: var(--border-width-thin) solid var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    transition: var(--transition-smooth);
+    box-shadow: 1px 1px 0px var(--border-color);
+}
+
+.checkbox-label:hover .custom-checkbox-box {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0px var(--border-color);
+}
+
+.checkbox-label input:checked ~ .custom-checkbox-box {
+    background-color: var(--accent-yellow);
+}
+
+.checkbox-label input:checked ~ .custom-checkbox-box:after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--border-color);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Small Button helper */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    margin-top: 4px;
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+}
+
 /* RESPONSIVE MEDIA QUERIES */
 @media (max-width: 1024px) {
     .quest-board {

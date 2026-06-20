@@ -8,7 +8,15 @@ let state = {
     exp: 0,
     coins: 0,
     soundOn: true,
-    quests: []
+    quests: [],
+    notifications: {
+        enabled: false,
+        notify24h: true,
+        notify3h: true,
+        notify1h: true,
+        notifyAction: true,
+        sent: {}
+    }
 };
 
 // Initial demo data if localStorage is empty
@@ -57,6 +65,15 @@ function loadState() {
             state.coins = state.coins || 0;
             state.soundOn = state.soundOn !== undefined ? state.soundOn : true;
             state.quests = state.quests || [];
+            
+            // Ensure notifications state exists
+            state.notifications = state.notifications || {};
+            state.notifications.enabled = state.notifications.enabled !== undefined ? state.notifications.enabled : false;
+            state.notifications.notify24h = state.notifications.notify24h !== undefined ? state.notifications.notify24h : true;
+            state.notifications.notify3h = state.notifications.notify3h !== undefined ? state.notifications.notify3h : true;
+            state.notifications.notify1h = state.notifications.notify1h !== undefined ? state.notifications.notify1h : true;
+            state.notifications.notifyAction = state.notifications.notifyAction !== undefined ? state.notifications.notifyAction : true;
+            state.notifications.sent = state.notifications.sent || {};
         } catch (e) {
             console.error("Error parsing saved state, resetting...", e);
             resetToDefault();
@@ -64,6 +81,14 @@ function loadState() {
     } else {
         // Initialize with default values
         state.quests = [...INITIAL_DEMO_QUESTS];
+        state.notifications = {
+            enabled: false,
+            notify24h: true,
+            notify3h: true,
+            notify1h: true,
+            notifyAction: true,
+            sent: {}
+        };
         saveState();
     }
 }
@@ -81,7 +106,15 @@ function resetToDefault() {
         exp: 0,
         coins: 0,
         soundOn: true,
-        quests: [...INITIAL_DEMO_QUESTS]
+        quests: [...INITIAL_DEMO_QUESTS],
+        notifications: {
+            enabled: false,
+            notify24h: true,
+            notify3h: true,
+            notify1h: true,
+            notifyAction: true,
+            sent: {}
+        }
     };
     saveState();
     updateUI();
@@ -143,7 +176,16 @@ const elements = {
     btnLvlClose: document.getElementById('btn-lvl-close'),
 
     // Reset button
-    btnResetApp: document.getElementById('btn-reset-app')
+    btnResetApp: document.getElementById('btn-reset-app'),
+
+    // Notifications UI
+    notificationToggle: document.getElementById('notification-toggle'),
+    notificationOptions: document.getElementById('notification-options'),
+    notify24h: document.getElementById('notify-24h'),
+    notify3h: document.getElementById('notify-3h'),
+    notify1h: document.getElementById('notify-1h'),
+    notifyAction: document.getElementById('notify-action'),
+    btnTestNotification: document.getElementById('btn-test-notification')
 };
 
 // --- AUDIO SYNTHESIZER (Web Audio API) ---
@@ -761,6 +803,25 @@ function addNewQuest(title, subject, dueIsoString, difficulty, notes) {
     setMascotExpression('idle');
     speakMascot(`新しいクエスト「${title}」を引き受けたよ！頑張ろう！`);
     playSound('click');
+
+    // Notification on quest accept
+    if (state.notifications.enabled && state.notifications.notifyAction) {
+        sendNotification(`⚔️ クエスト受注: ${title}`, {
+            body: `科目: ${getSubjectDisplayName(subject)} | 期限までに攻略しよう！`
+        });
+    }
+}
+
+// Helper to get subject display name
+function getSubjectDisplayName(subject) {
+    switch(subject) {
+        case 'japanese': return '📖 国語';
+        case 'math': return '📐 数学';
+        case 'english': return '🔤 英語';
+        case 'science': return '🧪 理科';
+        case 'social': return '🌍 社会';
+        default: return '✨ その他';
+    }
 }
 
 // Complete a quest
@@ -798,11 +859,25 @@ function completeQuest(id, clickX, clickY) {
     setTimeout(() => {
         updateMascotState();
     }, 4500);
+
+    // Notification on quest complete
+    if (state.notifications.enabled && state.notifications.notifyAction) {
+        sendNotification(`🏆 クエストクリア！`, {
+            body: `「${quest.title}」を攻略しました！お見事！`
+        });
+    }
 }
 
 // Delete completed quest history
 function deleteQuest(id) {
     state.quests = state.quests.filter(q => q.id !== id);
+    // Clean up notifications log for this quest
+    if (state.notifications.sent) {
+        const suffixes = ['-24h', '-3h', '-1h', '-overdue'];
+        suffixes.forEach(suffix => {
+            delete state.notifications.sent[id + suffix];
+        });
+    }
     saveState();
     playSound('delete');
     updateUI();
@@ -811,7 +886,16 @@ function deleteQuest(id) {
 // Clear all completed quests
 elements.btnClearCompleted.addEventListener('click', () => {
     if (confirm("クリア済みのクエスト履歴をすべて消去しますか？（現在の未完了クエストには影響しません）")) {
+        const completedIds = state.quests.filter(q => q.completed).map(q => q.id);
         state.quests = state.quests.filter(q => !q.completed);
+        if (state.notifications.sent) {
+            completedIds.forEach(id => {
+                const suffixes = ['-24h', '-3h', '-1h', '-overdue'];
+                suffixes.forEach(suffix => {
+                    delete state.notifications.sent[id + suffix];
+                });
+            });
+        }
         saveState();
         playSound('delete');
         updateUI();
@@ -985,6 +1069,221 @@ elements.toggleCompleted.addEventListener('click', () => {
 });
 
 
+// --- NOTIFICATION ENGINE ---
+
+// Register Service Worker
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => {
+                console.log('Service Worker registered successfully:', reg);
+            })
+            .catch(err => {
+                console.error('Service Worker registration failed:', err);
+            });
+    }
+}
+
+// Helper to send browser notification
+function sendNotification(title, options = {}) {
+    if (!state.notifications.enabled || Notification.permission !== 'granted') return;
+
+    const defaultOptions = {
+        icon: 'favicon.ico',
+        badge: 'favicon.ico',
+        tag: 'taskquest-notification',
+        renotify: true,
+        vibrate: [200, 100, 200]
+    };
+
+    const combinedOptions = Object.assign({}, defaultOptions, options);
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, combinedOptions);
+        }).catch(err => {
+            new Notification(title, combinedOptions);
+        });
+    } else {
+        new Notification(title, combinedOptions);
+    }
+}
+
+// Check uncompleted quests and trigger notifications
+function checkDueQuestsAndNotify() {
+    if (!state.notifications.enabled || Notification.permission !== 'granted') return;
+
+    const now = new Date();
+    let stateChanged = false;
+
+    // Ensure state.notifications.sent exists
+    if (!state.notifications.sent) {
+        state.notifications.sent = {};
+    }
+
+    state.quests.forEach(quest => {
+        if (quest.completed) return;
+
+        const dueTime = new Date(quest.due);
+        const timeLeftMs = dueTime - now;
+
+        // Thresholds
+        const oneHour = 1 * 60 * 60 * 1000;
+        const threeHours = 3 * 60 * 60 * 1000;
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+
+        // Overdue check
+        if (timeLeftMs <= 0) {
+            const key = `${quest.id}-overdue`;
+            if (!state.notifications.sent[key]) {
+                sendNotification(`🚨 クエスト失敗！(期限切れ)`, {
+                    body: `「${quest.title}」の提出期限が切れました。急いで対応してください！🛡️`
+                });
+                state.notifications.sent[key] = true;
+                // Mark earlier thresholds as sent so we don't retroactively trigger them
+                state.notifications.sent[`${quest.id}-1h`] = true;
+                state.notifications.sent[`${quest.id}-3h`] = true;
+                state.notifications.sent[`${quest.id}-24h`] = true;
+                stateChanged = true;
+            }
+        }
+        // Under 1 hour check
+        else if (timeLeftMs <= oneHour) {
+            if (state.notifications.notify1h) {
+                const key = `${quest.id}-1h`;
+                if (!state.notifications.sent[key]) {
+                    sendNotification(`⏱️ 直前警告！あと1時間`, {
+                        body: `クエスト「${quest.title}」の期限まで残り1時間です！急いで攻略せよ！⚔️`
+                    });
+                    state.notifications.sent[key] = true;
+                    // Mark earlier thresholds as sent
+                    state.notifications.sent[`${quest.id}-3h`] = true;
+                    state.notifications.sent[`${quest.id}-24h`] = true;
+                    stateChanged = true;
+                }
+            }
+        }
+        // Under 3 hours check
+        else if (timeLeftMs <= threeHours) {
+            if (state.notifications.notify3h) {
+                const key = `${quest.id}-3h`;
+                if (!state.notifications.sent[key]) {
+                    sendNotification(`⏳ 直前警告！あと3時間`, {
+                        body: `クエスト「${quest.title}」の期限まで残り3時間です。計画的に攻略しよう！`
+                    });
+                    state.notifications.sent[key] = true;
+                    // Mark earlier thresholds as sent
+                    state.notifications.sent[`${quest.id}-24h`] = true;
+                    stateChanged = true;
+                }
+            }
+        }
+        // Under 24 hours check
+        else if (timeLeftMs <= twentyFourHours) {
+            if (state.notifications.notify24h) {
+                const key = `${quest.id}-24h`;
+                if (!state.notifications.sent[key]) {
+                    sendNotification(`🚨 緊急警告！あと24時間`, {
+                        body: `緊急クエスト発生！「${quest.title}」の期限まで残り24時間です。最優先で攻略せよ！🔥`
+                    });
+                    state.notifications.sent[key] = true;
+                    stateChanged = true;
+                }
+            }
+        }
+    });
+
+    if (stateChanged) {
+        saveState();
+    }
+}
+
+// Initialize Notification UI states and event handlers
+function initNotificationUI() {
+    const toggle = elements.notificationToggle;
+    const optionsPanel = elements.notificationOptions;
+
+    // Load initial values from state
+    toggle.checked = state.notifications.enabled;
+    elements.notify24h.checked = state.notifications.notify24h;
+    elements.notify3h.checked = state.notifications.notify3h;
+    elements.notify1h.checked = state.notifications.notify1h;
+    elements.notifyAction.checked = state.notifications.notifyAction;
+
+    // Set panel disabled class based on status
+    if (state.notifications.enabled && Notification.permission === 'granted') {
+        optionsPanel.classList.remove('disabled-panel');
+    } else {
+        optionsPanel.classList.add('disabled-panel');
+        toggle.checked = false;
+        state.notifications.enabled = false;
+        saveState();
+    }
+
+    // Toggle Handler
+    toggle.addEventListener('change', () => {
+        playSound('click');
+        if (toggle.checked) {
+            // Request Notification Permission
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    state.notifications.enabled = true;
+                    optionsPanel.classList.remove('disabled-panel');
+                    saveState();
+                    
+                    // Welcome test notification
+                    sendNotification(`🔔 通知が有効になりました！`, {
+                        body: `伝書鳩がクエストの期限を監視します。お任せください！🐦`
+                    });
+                } else {
+                    toggle.checked = false;
+                    state.notifications.enabled = false;
+                    optionsPanel.classList.add('disabled-panel');
+                    saveState();
+                    alert('通知権限が拒否されました。通知を受け取るにはブラウザの設定から通知を許可してください。');
+                }
+            });
+        } else {
+            state.notifications.enabled = false;
+            optionsPanel.classList.add('disabled-panel');
+            saveState();
+        }
+    });
+
+    // Checkbox Handlers
+    const checkboxes = [
+        { elem: elements.notify24h, prop: 'notify24h' },
+        { elem: elements.notify3h, prop: 'notify3h' },
+        { elem: elements.notify1h, prop: 'notify1h' },
+        { elem: elements.notifyAction, prop: 'notifyAction' }
+    ];
+
+    checkboxes.forEach(item => {
+        item.elem.addEventListener('change', () => {
+            playSound('click');
+            state.notifications[item.prop] = item.elem.checked;
+            saveState();
+        });
+    });
+
+    // Test Button Handler
+    elements.btnTestNotification.addEventListener('click', () => {
+        playSound('click');
+        // Instantly trigger a fun test notification
+        const randomPhrases = [
+            "テスト通知に成功したよ！冒険の準備はオッケー？⚔️",
+            "クルックー！伝書鳩は今日も元気に稼働中！🐦",
+            "通知のテスト完了！これで大事なクエストを見逃さないね！🌟",
+            "タスクンからのメッセージ！今日も一緒にクエストを倒そう！🤖"
+        ];
+        const text = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
+        sendNotification("🔔 伝書鳩テスト通知", {
+            body: text
+        });
+    });
+}
+
+
 // --- INITIALIZATION ---
 function updateUI() {
     updateStatsBar();
@@ -994,8 +1293,11 @@ function updateUI() {
 
 function init() {
     loadState();
+    registerServiceWorker(); // Register Service Worker
     updateUI();
+    initNotificationUI();   // Initialize Notification UI
     startMascotInterval();
+    checkDueQuestsAndNotify(); // Initial check on load
     
     // Sound Toggle Handler
     elements.soundToggle.addEventListener('click', () => {
@@ -1032,6 +1334,7 @@ function init() {
     // Dynamic timer to refresh due times on the dashboard every 30 seconds
     setInterval(() => {
         renderQuestCards();
+        checkDueQuestsAndNotify(); // Run notification checks every 30 seconds
     }, 30000);
 }
 
