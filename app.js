@@ -11,6 +11,8 @@ let state = {
     quests: [],
     notifications: {
         enabled: false,
+        notify3d: true,
+        notify2d: true,
         notify24h: true,
         notify3h: true,
         notify1h: true,
@@ -69,6 +71,8 @@ function loadState() {
             // Ensure notifications state exists
             state.notifications = state.notifications || {};
             state.notifications.enabled = state.notifications.enabled !== undefined ? state.notifications.enabled : false;
+            state.notifications.notify3d = state.notifications.notify3d !== undefined ? state.notifications.notify3d : true;
+            state.notifications.notify2d = state.notifications.notify2d !== undefined ? state.notifications.notify2d : true;
             state.notifications.notify24h = state.notifications.notify24h !== undefined ? state.notifications.notify24h : true;
             state.notifications.notify3h = state.notifications.notify3h !== undefined ? state.notifications.notify3h : true;
             state.notifications.notify1h = state.notifications.notify1h !== undefined ? state.notifications.notify1h : true;
@@ -83,6 +87,8 @@ function loadState() {
         state.quests = [...INITIAL_DEMO_QUESTS];
         state.notifications = {
             enabled: false,
+            notify3d: true,
+            notify2d: true,
             notify24h: true,
             notify3h: true,
             notify1h: true,
@@ -109,6 +115,8 @@ function resetToDefault() {
         quests: [...INITIAL_DEMO_QUESTS],
         notifications: {
             enabled: false,
+            notify3d: true,
+            notify2d: true,
             notify24h: true,
             notify3h: true,
             notify1h: true,
@@ -181,6 +189,8 @@ const elements = {
     // Notifications UI
     notificationToggle: document.getElementById('notification-toggle'),
     notificationOptions: document.getElementById('notification-options'),
+    notify3d: document.getElementById('notify-3d'),
+    notify2d: document.getElementById('notify-2d'),
     notify24h: document.getElementById('notify-24h'),
     notify3h: document.getElementById('notify-3h'),
     notify1h: document.getElementById('notify-1h'),
@@ -873,7 +883,7 @@ function deleteQuest(id) {
     state.quests = state.quests.filter(q => q.id !== id);
     // Clean up notifications log for this quest
     if (state.notifications.sent) {
-        const suffixes = ['-24h', '-3h', '-1h', '-overdue'];
+        const suffixes = ['-3d', '-2d', '-24h', '-3h', '-1h', '-overdue'];
         suffixes.forEach(suffix => {
             delete state.notifications.sent[id + suffix];
         });
@@ -890,7 +900,7 @@ elements.btnClearCompleted.addEventListener('click', () => {
         state.quests = state.quests.filter(q => !q.completed);
         if (state.notifications.sent) {
             completedIds.forEach(id => {
-                const suffixes = ['-24h', '-3h', '-1h', '-overdue'];
+                const suffixes = ['-3d', '-2d', '-24h', '-3h', '-1h', '-overdue'];
                 suffixes.forEach(suffix => {
                     delete state.notifications.sent[id + suffix];
                 });
@@ -1131,6 +1141,8 @@ function checkDueQuestsAndNotify() {
         const oneHour = 1 * 60 * 60 * 1000;
         const threeHours = 3 * 60 * 60 * 1000;
         const twentyFourHours = 24 * 60 * 60 * 1000;
+        const twoDays = 2 * 24 * 60 * 60 * 1000;
+        const threeDays = 3 * 24 * 60 * 60 * 1000;
 
         // Overdue check
         if (timeLeftMs <= 0) {
@@ -1144,6 +1156,8 @@ function checkDueQuestsAndNotify() {
                 state.notifications.sent[`${quest.id}-1h`] = true;
                 state.notifications.sent[`${quest.id}-3h`] = true;
                 state.notifications.sent[`${quest.id}-24h`] = true;
+                state.notifications.sent[`${quest.id}-2d`] = true;
+                state.notifications.sent[`${quest.id}-3d`] = true;
                 stateChanged = true;
             }
         }
@@ -1159,6 +1173,8 @@ function checkDueQuestsAndNotify() {
                     // Mark earlier thresholds as sent
                     state.notifications.sent[`${quest.id}-3h`] = true;
                     state.notifications.sent[`${quest.id}-24h`] = true;
+                    state.notifications.sent[`${quest.id}-2d`] = true;
+                    state.notifications.sent[`${quest.id}-3d`] = true;
                     stateChanged = true;
                 }
             }
@@ -1174,6 +1190,8 @@ function checkDueQuestsAndNotify() {
                     state.notifications.sent[key] = true;
                     // Mark earlier thresholds as sent
                     state.notifications.sent[`${quest.id}-24h`] = true;
+                    state.notifications.sent[`${quest.id}-2d`] = true;
+                    state.notifications.sent[`${quest.id}-3d`] = true;
                     stateChanged = true;
                 }
             }
@@ -1185,6 +1203,37 @@ function checkDueQuestsAndNotify() {
                 if (!state.notifications.sent[key]) {
                     sendNotification(`🚨 緊急警告！あと24時間`, {
                         body: `緊急クエスト発生！「${quest.title}」の期限まで残り24時間です。最優先で攻略せよ！🔥`
+                    });
+                    state.notifications.sent[key] = true;
+                    // Mark earlier thresholds as sent
+                    state.notifications.sent[`${quest.id}-2d`] = true;
+                    state.notifications.sent[`${quest.id}-3d`] = true;
+                    stateChanged = true;
+                }
+            }
+        }
+        // Under 2 days check
+        else if (timeLeftMs <= twoDays) {
+            if (state.notifications.notify2d) {
+                const key = `${quest.id}-2d`;
+                if (!state.notifications.sent[key]) {
+                    sendNotification(`📅 期限接近アラート！あと2日前`, {
+                        body: `クエスト「${quest.title}」の期限まで残り2日です。そろそろ本格的に取りかかろう！🛡️`
+                    });
+                    state.notifications.sent[key] = true;
+                    // Mark earlier thresholds as sent
+                    state.notifications.sent[`${quest.id}-3d`] = true;
+                    stateChanged = true;
+                }
+            }
+        }
+        // Under 3 days check
+        else if (timeLeftMs <= threeDays) {
+            if (state.notifications.notify3d) {
+                const key = `${quest.id}-3d`;
+                if (!state.notifications.sent[key]) {
+                    sendNotification(`📅 期限接近アラート！あと3日前`, {
+                        body: `クエスト「${quest.title}」の期限まで残り3日です。計画的に準備を進めよう！🌟`
                     });
                     state.notifications.sent[key] = true;
                     stateChanged = true;
@@ -1205,6 +1254,8 @@ function initNotificationUI() {
 
     // Load initial values from state
     toggle.checked = state.notifications.enabled;
+    elements.notify3d.checked = state.notifications.notify3d;
+    elements.notify2d.checked = state.notifications.notify2d;
     elements.notify24h.checked = state.notifications.notify24h;
     elements.notify3h.checked = state.notifications.notify3h;
     elements.notify1h.checked = state.notifications.notify1h;
@@ -1252,6 +1303,8 @@ function initNotificationUI() {
 
     // Checkbox Handlers
     const checkboxes = [
+        { elem: elements.notify3d, prop: 'notify3d' },
+        { elem: elements.notify2d, prop: 'notify2d' },
         { elem: elements.notify24h, prop: 'notify24h' },
         { elem: elements.notify3h, prop: 'notify3h' },
         { elem: elements.notify1h, prop: 'notify1h' },
